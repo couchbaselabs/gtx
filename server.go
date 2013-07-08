@@ -29,8 +29,8 @@ type ServerStore interface {
 	GoodFind(k Key, tsMininum Timestamp) (*Write, error)
 	PendingGet(k Key, tsRequired Timestamp) (*Write, error)
 	PendingAdd(w Write) error
+	PendingPromote(ts Timestamp) error
 	AcksIncr(fromReplica Addr, ts Timestamp) (int, error)
-	Promote(ts Timestamp) error
 }
 
 type ServerController struct {
@@ -73,7 +73,7 @@ func (s *ServerController) ReceiveNotify(fromReplica Addr, ts Timestamp) error {
 		return err
 	}
 	if acks >= s.sp.AcksNeeded(ts) {
-		return s.ss.Promote(ts)
+		return s.ss.PendingPromote(ts)
 	}
 	return nil
 }

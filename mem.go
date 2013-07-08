@@ -28,10 +28,11 @@ func (s *MemStore) PendingAdd(w Write) error {
 	return nil
 }
 
+func (s *MemStore) PendingPromote(ts Timestamp) error {
+	return nil
+}
+
 func (s *MemStore) AcksIncr(fromReplica Addr, ts Timestamp) (int, error) {
 	return 0, nil
 }
 
-func (s *MemStore) Promote(ts Timestamp) error {
-	return nil
-}
