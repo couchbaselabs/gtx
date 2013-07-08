@@ -51,7 +51,7 @@ func (t *Transaction) Commit() error {
 		sibs = append(sibs, k)
 	}
 	for k, v := range t.writes {
-		err := t.s.Set(Write{Key: k, Val: v, Ts: t.ts, Sibs: sibs})
+		err := t.s.Set(&Write{Key: k, Val: v, Ts: t.ts, Sibs: sibs})
 		if err != nil {
 			return err
 		}

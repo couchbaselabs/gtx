@@ -14,7 +14,7 @@ type Write struct {
 // Client access interface.
 type Server interface {
 	Get(k Key, tsRequired Timestamp) (*Write, error)
-	Set(w Write) error
+	Set(w *Write) error
 }
 
 // Represents server-to-server communication.
@@ -27,8 +27,8 @@ type ServerPeer interface {
 // Represents server-local persistence.
 type ServerStore interface {
 	GoodFind(k Key, tsMininum Timestamp) (*Write, error)
-	PendingGet(k Key, tsRequired Timestamp) (*Write, error)
-	PendingAdd(w Write) error
+	PendingGet(k Key, ts Timestamp) (*Write, error)
+	PendingAdd(w *Write) error
 	PendingPromote(ts Timestamp) error
 	Ack(ts Timestamp, fromReplica Addr) (int, error)
 }
@@ -42,7 +42,7 @@ func NewServerController(sp ServerPeer, ss ServerStore) *ServerController {
 	return &ServerController{sp, ss}
 }
 
-func (s *ServerController) Set(w Write) error {
+func (s *ServerController) Set(w *Write) error {
 	err := s.ss.PendingAdd(w)
 	if err != nil {
 		return err
@@ -56,15 +56,15 @@ func (s *ServerController) Set(w Write) error {
 	return nil
 }
 
-func (s *ServerController) Get(k Key, tsRequired Timestamp) (*Write, error) {
-	w, err := s.ss.GoodFind(k, tsRequired)
+func (s *ServerController) Get(k Key, ts Timestamp) (*Write, error) {
+	w, err := s.ss.GoodFind(k, ts)
 	if err != nil || w != nil {
 		return w, err
 	}
-	if tsRequired == 0 {
+	if ts == 0 {
 		return nil, nil
 	}
-	return s.ss.PendingGet(k, tsRequired)
+	return s.ss.PendingGet(k, ts)
 }
 
 func (s *ServerController) ReceiveNotify(fromReplica Addr, ts Timestamp) error {

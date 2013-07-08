@@ -1,30 +1,49 @@
 package cbtx
 
 type MemStore struct { // Implements ServerStore interface.
-	pending map[Key]Timestamp
-	good    map[Key]Timestamp
+	pending map[Key]map[Timestamp]*Write
+	good    map[Key]map[Timestamp]*Write
 	acks    map[Timestamp]map[Addr]bool
-	writes  map[Timestamp]map[Key]Write
 }
 
 func NewMemStore() *MemStore {
 	return &MemStore{
-		pending: map[Key]Timestamp{},
-		good:    map[Key]Timestamp{},
+		pending: map[Key]map[Timestamp]*Write{},
+		good:    map[Key]map[Timestamp]*Write{},
 		acks:    map[Timestamp]map[Addr]bool{},
-		writes:  map[Timestamp]map[Key]Write{},
 	}
 }
 
 func (s *MemStore) GoodFind(k Key, tsMininum Timestamp) (*Write, error) {
-	return nil, nil
+	tsMap, ok := s.good[k]
+	if !ok || tsMap == nil {
+		return nil, nil
+	}
+	var best *Write
+	for _, w := range tsMap {
+		if best == nil || best.Ts < w.Ts {
+			best = w
+		}
+	}
+	return best, nil
 }
 
-func (s *MemStore) PendingGet(k Key, tsRequired Timestamp) (*Write, error) {
-	return nil, nil
+func (s *MemStore) PendingGet(k Key, ts Timestamp) (*Write, error) {
+	tsMap, ok := s.pending[k]
+	if !ok || tsMap == nil {
+		return nil, nil
+	}
+	w, _ := tsMap[ts]
+	return w, nil
 }
 
-func (s *MemStore) PendingAdd(w Write) error {
+func (s *MemStore) PendingAdd(w *Write) error {
+	tsMap, ok := s.pending[w.Key]
+	if !ok || tsMap == nil {
+		tsMap = map[Timestamp]*Write{}
+		s.pending[w.Key] = tsMap
+	}
+	tsMap[w.Ts] = w
 	return nil
 }
 
