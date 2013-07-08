@@ -30,7 +30,7 @@ type ServerStore interface {
 	PendingGet(k Key, tsRequired Timestamp) (*Write, error)
 	PendingAdd(w Write) error
 	PendingPromote(ts Timestamp) error
-	AcksIncr(fromReplica Addr, ts Timestamp) (int, error)
+	Ack(ts Timestamp, fromReplica Addr) (int, error)
 }
 
 type ServerController struct {
@@ -68,7 +68,7 @@ func (s *ServerController) Get(k Key, tsRequired Timestamp) (*Write, error) {
 }
 
 func (s *ServerController) ReceiveNotify(fromReplica Addr, ts Timestamp) error {
-	acks, err := s.ss.AcksIncr(fromReplica, ts)
+	acks, err := s.ss.Ack(ts, fromReplica)
 	if err != nil {
 		return err
 	}
