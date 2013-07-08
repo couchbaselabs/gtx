@@ -11,16 +11,20 @@ type Write struct {
 	Sibs []Key
 }
 
+// Client access interface.
 type Server interface {
 	Get(k Key, tsRequired Timestamp) (*Write, error)
 	Set(w Write) error
 }
 
-type ServerController struct {
-	ss       ServerStore
-	replicas []Addr
+// Represents server-to-server communication.
+type ServerPeer interface {
+	SendNotify(toReplica Addr, ts Timestamp) error
+	ReplicasFor(k Key) []Addr
+	AcksNeeded(ts Timestamp) int
 }
 
+// Represents server-local persistence.
 type ServerStore interface {
 	GoodFind(k Key, tsMininum Timestamp) (*Write, error)
 	PendingGet(k Key, tsRequired Timestamp) (*Write, error)
@@ -29,8 +33,13 @@ type ServerStore interface {
 	Promote(ts Timestamp) error
 }
 
-func NewServerController(ss ServerStore, replicas []Addr) *ServerController {
-	return &ServerController{ss, replicas}
+type ServerController struct {
+	sp ServerPeer
+	ss ServerStore
+}
+
+func NewServerController(sp ServerPeer, ss ServerStore) *ServerController {
+	return &ServerController{sp, ss}
 }
 
 func (s *ServerController) Set(w Write) error {
@@ -39,8 +48,8 @@ func (s *ServerController) Set(w Write) error {
 		return err
 	}
 	for _, k := range w.Sibs {
-		for _, replica := range s.ReplicasFor(k) {
-			s.SendNotify(replica, w.Ts)
+		for _, replica := range s.sp.ReplicasFor(k) {
+			s.sp.SendNotify(replica, w.Ts)
 		}
 	}
 	// TODO: Asynchronously send w to other replicas via anti-entropy.
@@ -63,20 +72,24 @@ func (s *ServerController) ReceiveNotify(fromReplica Addr, ts Timestamp) error {
 	if err != nil {
 		return err
 	}
-	if acks >= s.AcksNeeded(ts) {
+	if acks >= s.sp.AcksNeeded(ts) {
 		return s.ss.Promote(ts)
 	}
 	return nil
 }
 
-func (s *ServerController) SendNotify(toReplica Addr, ts Timestamp) error {
+type SimplePeer struct {
+	replicas []Addr
+}
+
+func (s *SimplePeer) SendNotify(toReplica Addr, ts Timestamp) error {
 	return nil
 }
 
-func (s *ServerController) ReplicasFor(k Key) []Addr {
+func (s *SimplePeer) ReplicasFor(k Key) []Addr {
 	return s.replicas
 }
 
-func (s *ServerController) AcksNeeded(ts Timestamp) int {
+func (s *SimplePeer) AcksNeeded(ts Timestamp) int {
 	return len(s.replicas)
 }

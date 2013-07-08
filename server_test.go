@@ -6,7 +6,7 @@ import (
 
 func TestNew(t *testing.T) {
 	ms := NewMemStore()
-	sc := NewServerController(ms, []Addr{"a"})
+	sc := NewServerController(&SimplePeer{[]Addr{"a"}}, ms)
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
@@ -14,7 +14,7 @@ func TestNew(t *testing.T) {
 
 func TestBasicAbort(t *testing.T) {
 	ms := NewMemStore()
-	sc := NewServerController(ms, []Addr{"a"})
+	sc := NewServerController(&SimplePeer{[]Addr{"a"}}, ms)
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
