@@ -11,6 +11,11 @@ type Write struct {
 	Sibs []Key
 }
 
+type Server interface {
+	Get(k Key, tsRequired Timestamp) (*Write, error)
+	Set(w Write) error
+}
+
 type ServerController struct {
 	ss ServerStore
 }
@@ -42,11 +47,6 @@ func (s *ServerController) Set(w Write) error {
 	}
 	// TODO: Asynchronously send w to other replicas via anti-entropy.
 	return nil
-}
-
-func (s *ServerController) Del(w Write) error {
-	w.Val = nil
-	return s.Set(w)
 }
 
 func (s *ServerController) Get(k Key, tsRequired Timestamp) (*Write, error) {
