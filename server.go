@@ -77,19 +77,3 @@ func (s *ServerController) ReceiveNotify(fromReplica Addr, ts Timestamp) error {
 	}
 	return nil
 }
-
-type SimplePeer struct {
-	replicas []Addr
-}
-
-func (s *SimplePeer) SendNotify(toReplica Addr, ts Timestamp) error {
-	return nil
-}
-
-func (s *SimplePeer) ReplicasFor(k Key) []Addr {
-	return s.replicas
-}
-
-func (s *SimplePeer) AcksNeeded(ts Timestamp) int {
-	return len(s.replicas)
-}

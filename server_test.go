@@ -5,16 +5,20 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	everyone := map[Addr]*MemPeer{}
+	everyone["a"] = &MemPeer{everyone}
 	ms := NewMemStore()
-	sc := NewServerController(&SimplePeer{[]Addr{"a"}}, ms)
+	sc := NewServerController(everyone["a"], ms)
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
 }
 
 func TestBasicAbort(t *testing.T) {
+	everyone := map[Addr]*MemPeer{}
+	everyone["a"] = &MemPeer{everyone}
 	ms := NewMemStore()
-	sc := NewServerController(&SimplePeer{[]Addr{"a"}}, ms)
+	sc := NewServerController(everyone["a"], ms)
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
