@@ -17,22 +17,22 @@ type Server interface {
 }
 
 type ServerController struct {
-	ss ServerStore
+	ss       ServerStore
+	replicas []Addr
 }
 
 type ServerStore interface {
 	GoodFind(k Key, tsMininum Timestamp) (*Write, error)
 	PendingGet(k Key, tsRequired Timestamp) (*Write, error)
 	PendingAdd(w Write) error
-	ReplicasFor(k Key) []Addr
 	SendNotify(toReplica Addr, ts Timestamp) error
 	AcksIncr(fromReplica Addr, ts Timestamp) (int, error)
 	AcksNeeded(ts Timestamp) int
 	Promote(ts Timestamp) error
 }
 
-func NewServerController(ss ServerStore) *ServerController {
-	return &ServerController{ss}
+func NewServerController(ss ServerStore, replicas []Addr) *ServerController {
+	return &ServerController{ss, replicas}
 }
 
 func (s *ServerController) Set(w Write) error {
@@ -41,7 +41,7 @@ func (s *ServerController) Set(w Write) error {
 		return err
 	}
 	for _, k := range w.Sibs {
-		for _, replica := range s.ss.ReplicasFor(k) {
+		for _, replica := range s.ReplicasFor(k) {
 			s.ss.SendNotify(replica, w.Ts)
 		}
 	}
@@ -69,4 +69,8 @@ func (s *ServerController) ReceiveNotify(fromReplica Addr, ts Timestamp) error {
 		return s.ss.Promote(ts)
 	}
 	return nil
+}
+
+func (s *ServerController) ReplicasFor(k Key) []Addr {
+	return s.replicas
 }

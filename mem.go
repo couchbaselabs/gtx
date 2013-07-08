@@ -1,7 +1,19 @@
 package cbtx
 
 type MemStore struct { // Implements ServerStore interface.
-	replicas []Addr
+	pending map[Key]Timestamp
+	good map[Key]Timestamp
+	acks map[Timestamp]int
+	writes map[Timestamp][]Write
+}
+
+func NewMemStore() *MemStore {
+	return &MemStore{
+		pending: map[Key]Timestamp{},
+		good: map[Key]Timestamp{},
+		acks: map[Timestamp]int{},
+		writes: map[Timestamp][]Write{},
+	}
 }
 
 func (s *MemStore) GoodFind(k Key, tsMininum Timestamp) (*Write, error) {
@@ -13,10 +25,6 @@ func (s *MemStore) PendingGet(k Key, tsRequired Timestamp) (*Write, error) {
 }
 
 func (s *MemStore) PendingAdd(w Write) error {
-	return nil
-}
-
-func (s *MemStore) ReplicasFor(k Key) []Addr {
 	return nil
 }
 

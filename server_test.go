@@ -5,16 +5,16 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	ms := &MemStore{[]Addr{"a"}}
-	sc := NewServerController(ms)
+	ms := NewMemStore()
+	sc := NewServerController(ms, []Addr{"a"})
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
 }
 
 func TestBasicAbort(t *testing.T) {
-	ms := &MemStore{[]Addr{"a"}}
-	sc := NewServerController(ms)
+	ms := NewMemStore()
+	sc := NewServerController(ms, []Addr{"a"})
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
