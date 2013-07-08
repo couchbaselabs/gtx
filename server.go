@@ -26,7 +26,6 @@ type ServerStore interface {
 	PendingGet(k Key, tsRequired Timestamp) (*Write, error)
 	PendingAdd(w Write) error
 	AcksIncr(fromReplica Addr, ts Timestamp) (int, error)
-	AcksNeeded(ts Timestamp) int
 	Promote(ts Timestamp) error
 }
 
@@ -64,7 +63,7 @@ func (s *ServerController) ReceiveNotify(fromReplica Addr, ts Timestamp) error {
 	if err != nil {
 		return err
 	}
-	if acks >= s.ss.AcksNeeded(ts) {
+	if acks >= s.AcksNeeded(ts) {
 		return s.ss.Promote(ts)
 	}
 	return nil
@@ -76,4 +75,8 @@ func (s *ServerController) SendNotify(toReplica Addr, ts Timestamp) error {
 
 func (s *ServerController) ReplicasFor(k Key) []Addr {
 	return s.replicas
+}
+
+func (s *ServerController) AcksNeeded(ts Timestamp) int {
+	return len(s.replicas)
 }
