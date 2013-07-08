@@ -4,5 +4,9 @@ import (
 	"testing"
 )
 
-func TestFoo(t *testing.T) {
+func TestBasic(t *testing.T) {
+	sc := NewServerController(nil)
+	if sc == nil {
+		t.Errorf("expected sc")
+	}
 }
