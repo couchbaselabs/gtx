@@ -7,7 +7,7 @@ type Transaction struct {
 	required map[Key]Timestamp
 }
 
-func Begin(s Server, ts Timestamp) *Transaction {
+func NewTransaction(s Server, ts Timestamp) *Transaction {
 	return &Transaction{
 		s:        s,
 		ts:       ts, // Should be clientId + logicalClock.
@@ -16,12 +16,14 @@ func Begin(s Server, ts Timestamp) *Transaction {
 	}
 }
 
-func (t *Transaction) Set(k Key, v []byte) {
+func (t *Transaction) Set(k Key, v []byte) error {
 	t.writes[k] = v
+	return nil
 }
 
-func (t *Transaction) Del(k Key) {
+func (t *Transaction) Del(k Key) error {
 	t.writes[k] = nil
+	return nil
 }
 
 func (t *Transaction) Get(k Key) ([]byte, error) {
