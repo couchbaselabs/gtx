@@ -25,7 +25,6 @@ type ServerStore interface {
 	GoodFind(k Key, tsMininum Timestamp) (*Write, error)
 	PendingGet(k Key, tsRequired Timestamp) (*Write, error)
 	PendingAdd(w Write) error
-	SendNotify(toReplica Addr, ts Timestamp) error
 	AcksIncr(fromReplica Addr, ts Timestamp) (int, error)
 	AcksNeeded(ts Timestamp) int
 	Promote(ts Timestamp) error
@@ -42,7 +41,7 @@ func (s *ServerController) Set(w Write) error {
 	}
 	for _, k := range w.Sibs {
 		for _, replica := range s.ReplicasFor(k) {
-			s.ss.SendNotify(replica, w.Ts)
+			s.SendNotify(replica, w.Ts)
 		}
 	}
 	// TODO: Asynchronously send w to other replicas via anti-entropy.
@@ -68,6 +67,10 @@ func (s *ServerController) ReceiveNotify(fromReplica Addr, ts Timestamp) error {
 	if acks >= s.ss.AcksNeeded(ts) {
 		return s.ss.Promote(ts)
 	}
+	return nil
+}
+
+func (s *ServerController) SendNotify(toReplica Addr, ts Timestamp) error {
 	return nil
 }
 

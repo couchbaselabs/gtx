@@ -2,17 +2,17 @@ package cbtx
 
 type MemStore struct { // Implements ServerStore interface.
 	pending map[Key]Timestamp
-	good map[Key]Timestamp
-	acks map[Timestamp]int
-	writes map[Timestamp][]Write
+	good    map[Key]Timestamp
+	acks    map[Timestamp]int
+	writes  map[Timestamp][]Write
 }
 
 func NewMemStore() *MemStore {
 	return &MemStore{
 		pending: map[Key]Timestamp{},
-		good: map[Key]Timestamp{},
-		acks: map[Timestamp]int{},
-		writes: map[Timestamp][]Write{},
+		good:    map[Key]Timestamp{},
+		acks:    map[Timestamp]int{},
+		writes:  map[Timestamp][]Write{},
 	}
 }
 
