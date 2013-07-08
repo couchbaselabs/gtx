@@ -1,13 +1,13 @@
 package cbtx
 
-type Timestamp uint64
+type Timestamp uint64 // Should be clientId + logicalClock.
 type Addr string
 type Key string
 
 type Write struct {
 	Key  Key
 	Val  []byte    // When nil, the write is a deletion.
-	Ts   Timestamp // Writes are ordered.
+	Ts   Timestamp // Writes are orderable.
 	Sibs []Key
 }
 
