@@ -42,6 +42,18 @@ func (s *MemStore) PendingGet(k Key, ts Timestamp) (*Write, error) {
 }
 
 func (s *MemStore) PendingAdd(w *Write) error {
+	if w.Prev > 0 {
+		prevPending := findMaxWrite(s.pending[w.Key], w.Prev)
+		if prevPending != nil && prevPending.Ts > w.Prev {
+			return fmt.Errorf("concurrent write already pending"+
+				", prev ts: %v, ts: %v", prevPending.Ts, w.Prev)
+		}
+		prevGood := findMaxWrite(s.good[w.Key], w.Prev)
+		if prevGood != nil && prevGood.Ts > w.Prev {
+			return fmt.Errorf("concurrent write already good"+
+				", prev ts: %v, ts: %v", prevGood.Ts, w.Prev)
+		}
+	}
 	tsMap, ok := s.pending[w.Key]
 	if !ok || tsMap == nil {
 		tsMap = map[Timestamp]*Write{}
