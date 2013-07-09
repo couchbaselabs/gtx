@@ -1,4 +1,4 @@
-package cbtx
+package gtx
 
 type Transaction struct {
 	s        Server
@@ -22,7 +22,7 @@ func (t *Transaction) Set(k Key, v []byte) error {
 }
 
 func (t *Transaction) Del(k Key) error {
-	t.writes[k] = nil
+	t.writes[k] = nil // A deletion is marked by a nil Val.
 	return nil
 }
 
