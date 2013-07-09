@@ -36,7 +36,7 @@ type ServerStore interface {
 	Ack(k Key, ts Timestamp, fromReplica Addr) (int, error)
 }
 
-type ServerController struct {
+type ServerController struct { // Implements Server interface.
 	sp ServerPeer
 	ss ServerStore
 }
