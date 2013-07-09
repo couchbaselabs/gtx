@@ -88,6 +88,7 @@ func (s *MemStore) Ack(k Key, ts Timestamp, fromReplica Addr) (int, error) {
 // ------------------------------------------------------------
 
 type MemPeer struct { // Implements ServerPeer interface for testing.
+	sc       *ServerController
 	me       Addr
 	everyone map[Addr]*MemPeer
 	messages chan MemMsg
@@ -101,7 +102,7 @@ type MemMsg struct {
 }
 
 func NewMemPeer(me Addr, everyone map[Addr]*MemPeer, messages chan MemMsg) *MemPeer {
-	p := &MemPeer{me, everyone, messages}
+	p := &MemPeer{nil, me, everyone, messages}
 	everyone[me] = p
 	return p
 }
@@ -123,11 +124,11 @@ func (s *MemPeer) ReplicasFor(k Key) []Addr {
 	return replicas
 }
 
-func (s *MemPeer) SendAllMessages(sc *ServerController) (sentOk, sentErr int) {
+func (s *MemPeer) SendAllMessages() (sentOk, sentErr int) {
 	for {
 		select {
 		case m := <-s.messages:
-			err := sc.ReceiveNotify(s.me, m.k, m.ts, m.acksNeeded)
+			err := m.replica.sc.ReceiveNotify(s.me, m.k, m.ts, m.acksNeeded)
 			if err == nil {
 				sentOk++
 			} else {

@@ -23,6 +23,8 @@ func TestBasicAbort(t *testing.T) {
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
+	a.sc = sc
+
 	t0 := NewTransaction(sc, 0)
 	if t0 == nil {
 		t.Errorf("expected t0")
@@ -54,6 +56,8 @@ func TestBasicCommit(t *testing.T) {
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
+	a.sc = sc
+
 	t0 := NewTransaction(sc, 0)
 	if t0.Set("x", []byte("xxx")) != nil {
 		t.Errorf("expected set to work")
@@ -61,7 +65,7 @@ func TestBasicCommit(t *testing.T) {
 	if t0.Commit() != nil {
 		t.Errorf("expected commit to work")
 	}
-	sentOk, sentErr := a.SendAllMessages(sc)
+	sentOk, sentErr := a.SendAllMessages()
 	if sentOk != 1 || sentErr != 0 {
 		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
@@ -80,7 +84,7 @@ func TestBasicCommit(t *testing.T) {
 	if t2.Commit() != nil {
 		t.Errorf("expected commit to work")
 	}
-	sentOk, sentErr = a.SendAllMessages(sc)
+	sentOk, sentErr = a.SendAllMessages()
 	if sentOk != 1 || sentErr != 0 {
 		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
@@ -98,7 +102,7 @@ func TestBasicCommit(t *testing.T) {
 	if t4.Commit() != nil {
 		t.Errorf("expected commit to work")
 	}
-	sentOk, sentErr = a.SendAllMessages(sc)
+	sentOk, sentErr = a.SendAllMessages()
 	if sentOk != 1 || sentErr != 0 {
 		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
