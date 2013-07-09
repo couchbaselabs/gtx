@@ -3,7 +3,7 @@ package gtx
 // Non-blocking transactional atomicity (NBTA) algorithm
 // from http://www.bailis.org/blob/non-blocking-transactional-atomicity
 
-type Timestamp uint64 // Should be clientId + logicalClock.
+type Timestamp uint64 // Should be logicalClock + f(clientId, random).
 type Addr string
 type Key string
 

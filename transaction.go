@@ -11,7 +11,7 @@ type Transaction struct {
 func NewTransaction(s Server, ts Timestamp) *Transaction {
 	return &Transaction{
 		s:        s,
-		ts:       ts, // Should be clientId + logicalClock.
+		ts:       ts, // Should be logicalClock + f(clientId, random).
 		reads:    map[Key]Timestamp{},
 		writes:   map[Key][]byte{},
 		required: map[Key]Timestamp{},
