@@ -3,6 +3,7 @@ package gtx
 type Transaction struct {
 	s        Server
 	ts       Timestamp
+	reads    map[Key]Timestamp
 	writes   map[Key][]byte
 	required map[Key]Timestamp
 }
@@ -11,6 +12,7 @@ func NewTransaction(s Server, ts Timestamp) *Transaction {
 	return &Transaction{
 		s:        s,
 		ts:       ts, // Should be clientId + logicalClock.
+		reads:    map[Key]Timestamp{},
 		writes:   map[Key][]byte{},
 		required: map[Key]Timestamp{},
 	}
@@ -36,6 +38,10 @@ func (t *Transaction) Get(k Key) ([]byte, error) {
 	if err != nil || w == nil {
 		return nil, err
 	}
+	tsRead, _ := t.reads[k]
+	if w.Ts > tsRead {
+		t.reads[k] = w.Ts
+	}
 	for _, sibKey := range w.Sibs {
 		sibTsRequired, _ := t.required[sibKey]
 		if w.Ts > sibTsRequired {
@@ -51,7 +57,8 @@ func (t *Transaction) Commit() error {
 		sibs = append(sibs, k)
 	}
 	for k, v := range t.writes {
-		err := t.s.Set(&Write{Key: k, Val: v, Ts: t.ts, Sibs: sibs})
+		tsRead, _ := t.reads[k]
+		err := t.s.Set(&Write{Key: k, Val: v, Ts: t.ts, Sibs: sibs, Prev: tsRead})
 		if err != nil {
 			return err
 		}

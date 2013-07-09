@@ -12,6 +12,7 @@ type Write struct {
 	Val  []byte    // When nil, the write is a deletion.
 	Ts   Timestamp // Writes are orderable.
 	Sibs []Key
+	Prev Timestamp
 }
 
 // Client access interface.
