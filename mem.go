@@ -25,7 +25,7 @@ func (s *MemStore) GoodFind(k Key, tsMininum Timestamp) (*Write, error) {
 	}
 	var best *Write
 	for _, w := range tsMap {
-		if best == nil || best.Ts < w.Ts {
+		if (best == nil || best.Ts < w.Ts) && w.Ts >= tsMininum {
 			best = w
 		}
 	}
