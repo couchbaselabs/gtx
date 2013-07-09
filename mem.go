@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type MemStore struct { // Implements ServerStore interface.
+type MemStore struct { // Implements ServerStore interface for testing.
 	pending map[Key]map[Timestamp]*Write
 	good    map[Key]map[Timestamp]*Write
 	acks    map[Key]map[Timestamp]map[Addr]bool
@@ -87,16 +87,23 @@ func (s *MemStore) Ack(k Key, ts Timestamp, fromReplica Addr) (int, error) {
 
 // ------------------------------------------------------------
 
-type MemPeer struct { // Implements ServerPeer interface.
+type MemPeer struct { // Implements ServerPeer interface for testing.
+	me       Addr
 	everyone map[Addr]*MemPeer
 }
 
-func (s *MemPeer) SendNotify(toReplica Addr, k Key, ts Timestamp, acksNeeeded int) error {
-	return nil
+func (s *MemPeer) SendNotify(sc *ServerController,
+	toReplica Addr, k Key, ts Timestamp, acksNeeded int) error {
+
+	replica, ok := s.everyone[toReplica]
+	if !ok || replica == nil {
+		return fmt.Errorf("no MemPeer.SendNotify replica: %v", toReplica)
+	}
+	return sc.ReceiveNotify(s.me, k, ts, acksNeeded)
 }
 
 func (s *MemPeer) ReplicasFor(k Key) []Addr {
-	replicas := make([]Addr, len(s.everyone))
+	replicas := make([]Addr, 0, len(s.everyone))
 	for a, _ := range s.everyone {
 		replicas = append(replicas, a)
 	}
