@@ -90,16 +90,29 @@ func (s *MemStore) Ack(k Key, ts Timestamp, fromReplica Addr) (int, error) {
 type MemPeer struct { // Implements ServerPeer interface for testing.
 	me       Addr
 	everyone map[Addr]*MemPeer
+	messages chan MemMsg
 }
 
-func (s *MemPeer) AsyncNotify(sc *ServerController,
-	toReplica Addr, k Key, ts Timestamp, acksNeeded int) error {
+type MemMsg struct {
+	replica    *MemPeer
+	k          Key
+	ts         Timestamp
+	acksNeeded int
+}
 
-	replica, ok := s.everyone[toReplica]
+func NewMemPeer(me Addr, everyone map[Addr]*MemPeer, messages chan MemMsg) *MemPeer {
+	p := &MemPeer{me, everyone, messages}
+	everyone[me] = p
+	return p
+}
+
+func (s *MemPeer) AsyncNotify(to Addr, k Key, ts Timestamp, acksNeeded int) error {
+	replica, ok := s.everyone[to]
 	if !ok || replica == nil {
-		return fmt.Errorf("no MemPeer.AsyncNotify replica: %v", toReplica)
+		return fmt.Errorf("no MemPeer.AsyncNotify replica: %v", to)
 	}
-	return sc.ReceiveNotify(s.me, k, ts, acksNeeded)
+	s.messages <- MemMsg{replica, k, ts, acksNeeded}
+	return nil
 }
 
 func (s *MemPeer) ReplicasFor(k Key) []Addr {
@@ -108,4 +121,20 @@ func (s *MemPeer) ReplicasFor(k Key) []Addr {
 		replicas = append(replicas, a)
 	}
 	return replicas
+}
+
+func (s *MemPeer) SendAllMessages(sc *ServerController) (sentOk, sentErr int) {
+	for {
+		select {
+		case m := <-s.messages:
+			err := sc.ReceiveNotify(s.me, m.k, m.ts, m.acksNeeded)
+			if err == nil {
+				sentOk++
+			} else {
+				sentErr++
+			}
+		default:
+			return sentOk, sentErr
+		}
+	}
 }

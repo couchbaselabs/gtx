@@ -22,8 +22,7 @@ type Server interface {
 
 // Represents server-to-server communication.
 type ServerPeer interface {
-	AsyncNotify(sc *ServerController, toReplica Addr, k Key, ts Timestamp,
-		acksNeeeded int) error
+	AsyncNotify(toReplica Addr, k Key, ts Timestamp, acksNeeeded int) error
 	ReplicasFor(k Key) []Addr
 }
 
@@ -54,7 +53,7 @@ func (s *ServerController) Set(w *Write) error {
 		replicas := s.sp.ReplicasFor(sibKey)
 		acksNeeded := len(w.Sibs) * len(replicas)
 		for _, replica := range replicas {
-			err := s.sp.AsyncNotify(s, replica, sibKey, w.Ts, acksNeeded)
+			err := s.sp.AsyncNotify(replica, sibKey, w.Ts, acksNeeded)
 			if err != nil {
 				return err
 			}

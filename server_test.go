@@ -7,9 +7,9 @@ import (
 
 func TestNew(t *testing.T) {
 	everyone := map[Addr]*MemPeer{}
-	everyone["a"] = &MemPeer{"a", everyone}
+	a := NewMemPeer("a", everyone, make(chan MemMsg, 10))
 	ms := NewMemStore()
-	sc := NewServerController(everyone["a"], ms)
+	sc := NewServerController(a, ms)
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
@@ -17,9 +17,9 @@ func TestNew(t *testing.T) {
 
 func TestBasicAbort(t *testing.T) {
 	everyone := map[Addr]*MemPeer{}
-	everyone["a"] = &MemPeer{"a", everyone}
+	a := NewMemPeer("a", everyone, make(chan MemMsg, 10))
 	ms := NewMemStore()
-	sc := NewServerController(everyone["a"], ms)
+	sc := NewServerController(a, ms)
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
@@ -48,9 +48,9 @@ func TestBasicAbort(t *testing.T) {
 
 func TestBasicCommit(t *testing.T) {
 	everyone := map[Addr]*MemPeer{}
-	everyone["a"] = &MemPeer{"a", everyone}
+	a := NewMemPeer("a", everyone, make(chan MemMsg, 10))
 	ms := NewMemStore()
-	sc := NewServerController(everyone["a"], ms)
+	sc := NewServerController(a, ms)
 	if sc == nil {
 		t.Errorf("expected sc")
 	}
@@ -60,6 +60,10 @@ func TestBasicCommit(t *testing.T) {
 	}
 	if t0.Commit() != nil {
 		t.Errorf("expected commit to work")
+	}
+	sentOk, sentErr := a.SendAllMessages(sc)
+	if sentOk != 1 || sentErr != 0 {
+		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
 
 	t1 := NewTransaction(sc, 1)
@@ -76,6 +80,10 @@ func TestBasicCommit(t *testing.T) {
 	if t2.Commit() != nil {
 		t.Errorf("expected commit to work")
 	}
+	sentOk, sentErr = a.SendAllMessages(sc)
+	if sentOk != 1 || sentErr != 0 {
+		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
+	}
 
 	t3 := NewTransaction(sc, 3)
 	v, err = t3.Get("x")
@@ -89,6 +97,10 @@ func TestBasicCommit(t *testing.T) {
 	}
 	if t4.Commit() != nil {
 		t.Errorf("expected commit to work")
+	}
+	sentOk, sentErr = a.SendAllMessages(sc)
+	if sentOk != 1 || sentErr != 0 {
+		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
 
 	t5 := NewTransaction(sc, 5)
