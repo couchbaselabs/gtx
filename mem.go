@@ -52,10 +52,21 @@ func (s *MemStore) PendingAdd(w *Write) error {
 }
 
 func (s *MemStore) PendingPromote(k Key, ts Timestamp) error {
-	tsMap, ok := s.pending[k]
-	if !ok || tsMap == nil {
-		return fmt.Errorf("no pending write to promote, ts: %v", ts)
+	ptsMap, ok := s.pending[k]
+	if !ok || ptsMap == nil {
+		return fmt.Errorf("no write to promote at k: %v, ts: %v", k, ts)
 	}
+	w, ok := ptsMap[ts]
+	if !ok || w == nil {
+		return fmt.Errorf("no write to promote at ts: %v, k: %v", ts, k)
+	}
+	gtsMap, ok := s.good[k]
+	if !ok || gtsMap == nil {
+		gtsMap = map[Timestamp]*Write{}
+		s.good[k] = gtsMap
+	}
+	gtsMap[ts] = w
+	// TODO: eventually clear out ptsMap and s.pending entries.
 	return nil
 }
 
