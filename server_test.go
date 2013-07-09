@@ -62,7 +62,7 @@ func TestBasicCommit(t *testing.T) {
 	if t0.Set("x", []byte("xxx")) != nil {
 		t.Errorf("expected set to work")
 	}
-	if t0.Commit() != nil {
+	if t0.Commit(false) != nil {
 		t.Errorf("expected commit to work")
 	}
 	sentOk, sentErr := a.SendMessages(-1)
@@ -81,7 +81,7 @@ func TestBasicCommit(t *testing.T) {
 	if t2.Set("x", []byte("xxxx")) != nil {
 		t.Errorf("expected set to work")
 	}
-	if t2.Commit() != nil {
+	if t2.Commit(false) != nil {
 		t.Errorf("expected commit to work")
 	}
 	sentOk, sentErr = a.SendMessages(-1)
@@ -99,7 +99,7 @@ func TestBasicCommit(t *testing.T) {
 	if t4.Del("x") != nil {
 		t.Errorf("expected del to work")
 	}
-	if t4.Commit() != nil {
+	if t4.Commit(false) != nil {
 		t.Errorf("expected commit to work")
 	}
 	sentOk, sentErr = a.SendMessages(-1)

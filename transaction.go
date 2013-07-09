@@ -51,13 +51,16 @@ func (t *Transaction) Get(k Key) ([]byte, error) {
 	return w.Val, nil
 }
 
-func (t *Transaction) Commit() error {
+func (t *Transaction) Commit(errorIfConcurrent bool) error {
 	sibs := make([]Key, 0, len(t.writes))
 	for k, _ := range t.writes {
 		sibs = append(sibs, k)
 	}
 	for k, v := range t.writes {
-		tsRead, _ := t.reads[k]
+		var tsRead Timestamp
+		if errorIfConcurrent {
+			tsRead, _ = t.reads[k] // Provide the ts we saw at read/Get() time.
+		}
 		err := t.s.Set(&Write{Key: k, Val: v, Ts: t.ts, Sibs: sibs, Prev: tsRead})
 		if err != nil {
 			return err
