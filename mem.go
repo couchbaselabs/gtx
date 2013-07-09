@@ -19,11 +19,7 @@ func NewMemStore() *MemStore {
 }
 
 func (s *MemStore) GoodFind(k Key, tsMinimum Timestamp) (*Write, error) {
-	tsMap, ok := s.good[k]
-	if !ok || tsMap == nil {
-		return nil, nil
-	}
-	return findMaxWrite(tsMap, tsMinimum), nil
+	return findMaxWrite(s.good[k], tsMinimum), nil
 }
 
 func findMaxWrite(tsMap map[Timestamp]*Write, tsMinimum Timestamp) *Write {
