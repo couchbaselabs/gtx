@@ -18,18 +18,22 @@ func NewMemStore() *MemStore {
 	}
 }
 
-func (s *MemStore) GoodFind(k Key, tsMininum Timestamp) (*Write, error) {
+func (s *MemStore) GoodFind(k Key, tsMinimum Timestamp) (*Write, error) {
 	tsMap, ok := s.good[k]
 	if !ok || tsMap == nil {
 		return nil, nil
 	}
-	var best *Write
+	return findMaxWrite(tsMap, tsMinimum), nil
+}
+
+func findMaxWrite(tsMap map[Timestamp]*Write, tsMinimum Timestamp) *Write {
+	var max *Write
 	for _, w := range tsMap {
-		if (best == nil || best.Ts < w.Ts) && w.Ts >= tsMininum {
-			best = w
+		if (max == nil || max.Ts < w.Ts) && w.Ts >= tsMinimum {
+			max = w
 		}
 	}
-	return best, nil
+	return max
 }
 
 func (s *MemStore) PendingGet(k Key, ts Timestamp) (*Write, error) {
