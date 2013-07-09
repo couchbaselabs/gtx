@@ -92,12 +92,12 @@ type MemPeer struct { // Implements ServerPeer interface for testing.
 	everyone map[Addr]*MemPeer
 }
 
-func (s *MemPeer) SendNotify(sc *ServerController,
+func (s *MemPeer) AsyncNotify(sc *ServerController,
 	toReplica Addr, k Key, ts Timestamp, acksNeeded int) error {
 
 	replica, ok := s.everyone[toReplica]
 	if !ok || replica == nil {
-		return fmt.Errorf("no MemPeer.SendNotify replica: %v", toReplica)
+		return fmt.Errorf("no MemPeer.AsyncNotify replica: %v", toReplica)
 	}
 	return sc.ReceiveNotify(s.me, k, ts, acksNeeded)
 }
