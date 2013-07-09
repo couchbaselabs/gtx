@@ -19,9 +19,8 @@ type Server interface {
 
 // Represents server-to-server communication.
 type ServerPeer interface {
-	SendNotify(toReplica Addr, ts Timestamp) error
+	SendNotify(toReplica Addr, k Key, ts Timestamp, acksNeeeded int) error
 	ReplicasFor(k Key) []Addr
-	AcksNeeded(ts Timestamp) int
 }
 
 // Represents server-local persistence.
@@ -29,8 +28,8 @@ type ServerStore interface {
 	GoodFind(k Key, tsMininum Timestamp) (*Write, error)
 	PendingGet(k Key, ts Timestamp) (*Write, error)
 	PendingAdd(w *Write) error
-	PendingPromote(ts Timestamp) error
-	Ack(ts Timestamp, fromReplica Addr) (int, error)
+	PendingPromote(k Key, ts Timestamp) error
+	Ack(k Key, ts Timestamp, fromReplica Addr) (int, error)
 }
 
 type ServerController struct {
@@ -47,9 +46,11 @@ func (s *ServerController) Set(w *Write) error {
 	if err != nil {
 		return err
 	}
-	for _, k := range w.Sibs {
-		for _, replica := range s.sp.ReplicasFor(k) {
-			s.sp.SendNotify(replica, w.Ts)
+	for _, sibKey := range w.Sibs {
+		replicas := s.sp.ReplicasFor(sibKey)
+		acksNeeded := len(w.Sibs) * len(replicas)
+		for _, replica := range replicas {
+			s.sp.SendNotify(replica, sibKey, w.Ts, acksNeeded)
 		}
 	}
 	// TODO: Asynchronously send w to other replicas via anti-entropy.
@@ -67,13 +68,14 @@ func (s *ServerController) Get(k Key, ts Timestamp) (*Write, error) {
 	return s.ss.PendingGet(k, ts)
 }
 
-func (s *ServerController) ReceiveNotify(fromReplica Addr, ts Timestamp) error {
-	acks, err := s.ss.Ack(ts, fromReplica)
+func (s *ServerController) ReceiveNotify(fromReplica Addr,
+	k Key, ts Timestamp, acksNeeded int) error {
+	acks, err := s.ss.Ack(k, ts, fromReplica)
 	if err != nil {
 		return err
 	}
-	if acks >= s.sp.AcksNeeded(ts) {
-		return s.ss.PendingPromote(ts)
+	if acks >= acksNeeded {
+		return s.ss.PendingPromote(k, ts)
 	}
 	return nil
 }

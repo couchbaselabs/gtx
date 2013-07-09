@@ -1,16 +1,20 @@
 package cbtx
 
+import (
+	"fmt"
+)
+
 type MemStore struct { // Implements ServerStore interface.
 	pending map[Key]map[Timestamp]*Write
 	good    map[Key]map[Timestamp]*Write
-	acks    map[Timestamp]map[Addr]bool
+	acks    map[Key]map[Timestamp]map[Addr]bool
 }
 
 func NewMemStore() *MemStore {
 	return &MemStore{
 		pending: map[Key]map[Timestamp]*Write{},
 		good:    map[Key]map[Timestamp]*Write{},
-		acks:    map[Timestamp]map[Addr]bool{},
+		acks:    map[Key]map[Timestamp]map[Addr]bool{},
 	}
 }
 
@@ -47,18 +51,27 @@ func (s *MemStore) PendingAdd(w *Write) error {
 	return nil
 }
 
-func (s *MemStore) PendingPromote(ts Timestamp) error {
+func (s *MemStore) PendingPromote(k Key, ts Timestamp) error {
+	tsMap, ok := s.pending[k]
+	if !ok || tsMap == nil {
+		return fmt.Errorf("no pending write to promote, ts: %v", ts)
+	}
 	return nil
 }
 
-func (s *MemStore) Ack(ts Timestamp, fromReplica Addr) (int, error) {
-	m, ok := s.acks[ts]
-	if !ok || m == nil {
-		m = map[Addr]bool{}
-		s.acks[ts] = m
+func (s *MemStore) Ack(k Key, ts Timestamp, fromReplica Addr) (int, error) {
+	mt, ok := s.acks[k]
+	if !ok || mt == nil {
+		mt = map[Timestamp]map[Addr]bool{}
+		s.acks[k] = mt
 	}
-	m[fromReplica] = true
-	return len(m), nil
+	ma, ok := mt[ts]
+	if !ok || ma == nil {
+		ma = map[Addr]bool{}
+		mt[ts] = ma
+	}
+	ma[fromReplica] = true
+	return len(ma), nil
 }
 
 // ------------------------------------------------------------
@@ -67,7 +80,7 @@ type MemPeer struct { // Implements ServerPeer interface.
 	everyone map[Addr]*MemPeer
 }
 
-func (s *MemPeer) SendNotify(toReplica Addr, ts Timestamp) error {
+func (s *MemPeer) SendNotify(toReplica Addr, k Key, ts Timestamp, acksNeeeded int) error {
 	return nil
 }
 
@@ -77,8 +90,4 @@ func (s *MemPeer) ReplicasFor(k Key) []Addr {
 		replicas = append(replicas, a)
 	}
 	return replicas
-}
-
-func (s *MemPeer) AcksNeeded(ts Timestamp) int {
-	return len(s.everyone)
 }
