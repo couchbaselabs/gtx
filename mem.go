@@ -112,6 +112,8 @@ func (s *MemPeer) AsyncNotify(to Addr, k Key, ts Timestamp, acksNeeded int) erro
 	if !ok || replica == nil {
 		return fmt.Errorf("no MemPeer.AsyncNotify replica: %v", to)
 	}
+	// Buffer messages in this channel.  A small channel can be used
+	// by tests to simulate a clogged up system.
 	s.messages <- MemMsg{replica, k, ts, acksNeeded}
 	return nil
 }
@@ -124,8 +126,10 @@ func (s *MemPeer) ReplicasFor(k Key) []Addr {
 	return replicas
 }
 
-func (s *MemPeer) SendAllMessages() (sentOk, sentErr int) {
-	for {
+// Allows caller to unclog maxSend number of messages.  A negative
+// maxSend means send everything and return.
+func (s *MemPeer) SendMessages(maxSend int) (sentOk, sentErr int) {
+	for i := 0; maxSend < 0 || i < maxSend; i++ {
 		select {
 		case m := <-s.messages:
 			err := m.replica.sc.ReceiveNotify(s.me, m.k, m.ts, m.acksNeeded)
@@ -138,4 +142,5 @@ func (s *MemPeer) SendAllMessages() (sentOk, sentErr int) {
 			return sentOk, sentErr
 		}
 	}
+	return sentOk, sentErr
 }
