@@ -1,5 +1,9 @@
 package gtx
 
+import (
+	"fmt"
+)
+
 type Transaction struct {
 	s        Server
 	ts       Timestamp
@@ -38,8 +42,15 @@ func (t *Transaction) Get(k Key) ([]byte, error) {
 	}
 	tsRequired, _ := t.required[k]
 	w, err := t.s.Get(k, tsRequired)
-	if err != nil || w == nil {
+	if err != nil {
 		return nil, err
+	}
+	if w == nil {
+		if tsRequired > 0 {
+			return nil, fmt.Errorf("missing pending write, k: %v, tsRequired: %v",
+				k, tsRequired)
+		}
+		return nil, nil
 	}
 	tsRead, _ := t.reads[k]
 	if w.Ts > tsRead {
@@ -82,6 +93,7 @@ func (t *Transaction) Abort() error {
 
 func (t *Transaction) done() {
 	t.s = nil
+	t.reads = nil
 	t.writes = nil
 	t.required = nil
 }
