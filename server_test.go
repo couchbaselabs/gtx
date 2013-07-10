@@ -166,3 +166,54 @@ func TestCommitErrorIfConcurrent(t *testing.T) {
 		t.Errorf("expected commit t2 true to fail")
 	}
 }
+
+func TestTwoKey(t *testing.T) {
+	everyone := map[Addr]*MemPeer{}
+	a := NewMemPeer("a", everyone, make(chan MemMsg, 10))
+	ms := NewMemStore()
+	sc := NewServerController(a, ms)
+	if sc == nil {
+		t.Errorf("expected sc")
+	}
+	a.sc = sc
+
+	tx := NewTransaction(sc, 10)
+	tx.Set("x", []byte("xx"))
+	tx.Set("y", []byte("yy"))
+	if tx.Commit(true) != nil {
+		t.Errorf("expected commit to work")
+	}
+	sentOk, sentErr := a.SendMessages(-1)
+	if sentOk != 4 || sentErr != 0 {
+		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
+	}
+
+	tx = NewTransaction(sc, 11)
+	v, err := tx.Get("x")
+	if err != nil || string(v) != "xx" {
+		t.Errorf("expected Get to work, v: %v, err: %v", v, err)
+	}
+	v, err = tx.Get("y")
+	if err != nil || string(v) != "yy" {
+		t.Errorf("expected Get to work, v: %v, err: %v", v, err)
+	}
+	tx.Set("x", []byte("xxx"))
+	tx.Set("y", []byte("yyy"))
+	if tx.Commit(true) != nil {
+		t.Errorf("expected commit to work")
+	}
+	sentOk, sentErr = a.SendMessages(-1)
+	if sentOk != 4 || sentErr != 0 {
+		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
+	}
+
+	tx = NewTransaction(sc, 12)
+	v, err = tx.Get("x")
+	if err != nil || string(v) != "xxx" {
+		t.Errorf("expected Get to work, v: %v, err: %v", v, err)
+	}
+	v, err = tx.Get("y")
+	if err != nil || string(v) != "yyy" {
+		t.Errorf("expected Get to work, v: %v, err: %v", v, err)
+	}
+}

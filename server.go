@@ -23,7 +23,7 @@ type Server interface {
 
 // Represents server-to-server communication.
 type ServerPeer interface {
-	AsyncNotify(toReplica Addr, k Key, ts Timestamp, acksNeeeded int) error
+	AsyncNotify(toReplica Addr, toKey Key, fromKey Key, ts Timestamp, acksNeeeded int) error
 	ReplicasFor(k Key) []Addr
 }
 
@@ -33,7 +33,7 @@ type ServerStore interface {
 	PendingGet(k Key, ts Timestamp) (*Write, error)
 	PendingAdd(w *Write) error
 	PendingPromote(k Key, ts Timestamp) error
-	Ack(k Key, ts Timestamp, fromReplica Addr) (int, error)
+	Ack(toKey Key, fromKey Key, ts Timestamp, fromReplica Addr) (int, error)
 }
 
 type ServerController struct { // Implements Server interface.
@@ -54,7 +54,7 @@ func (s *ServerController) Set(w *Write) error {
 		replicas := s.sp.ReplicasFor(sibKey)
 		acksNeeded := len(w.Sibs) * len(replicas)
 		for _, replica := range replicas {
-			err := s.sp.AsyncNotify(replica, sibKey, w.Ts, acksNeeded)
+			err := s.sp.AsyncNotify(replica, sibKey, w.Key, w.Ts, acksNeeded)
 			if err != nil {
 				return err
 			}
@@ -80,13 +80,13 @@ func (s *ServerController) Get(k Key, ts Timestamp) (*Write, error) {
 }
 
 func (s *ServerController) ReceiveNotify(fromReplica Addr,
-	k Key, ts Timestamp, acksNeeded int) error {
-	acks, err := s.ss.Ack(k, ts, fromReplica)
+	toKey Key, fromKey Key, ts Timestamp, acksNeeded int) error {
+	acks, err := s.ss.Ack(toKey, fromKey, ts, fromReplica)
 	if err != nil {
 		return err
 	}
 	if acks >= acksNeeded {
-		return s.ss.PendingPromote(k, ts)
+		return s.ss.PendingPromote(toKey, ts)
 	}
 	return nil
 }

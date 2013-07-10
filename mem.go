@@ -7,14 +7,14 @@ import (
 type MemStore struct { // Implements ServerStore interface for testing.
 	pending map[Key]map[Timestamp]*Write
 	stable  map[Key]map[Timestamp]*Write
-	acks    map[Key]map[Timestamp]map[Addr]bool
+	acks    map[Key]map[Timestamp]map[string]bool
 }
 
 func NewMemStore() *MemStore {
 	return &MemStore{
 		pending: map[Key]map[Timestamp]*Write{},
 		stable:  map[Key]map[Timestamp]*Write{},
-		acks:    map[Key]map[Timestamp]map[Addr]bool{},
+		acks:    map[Key]map[Timestamp]map[string]bool{},
 	}
 }
 
@@ -83,18 +83,18 @@ func (s *MemStore) PendingPromote(k Key, ts Timestamp) error {
 	return nil
 }
 
-func (s *MemStore) Ack(k Key, ts Timestamp, fromReplica Addr) (int, error) {
-	mt, ok := s.acks[k]
+func (s *MemStore) Ack(toKey Key, fromKey Key, ts Timestamp, fromReplica Addr) (int, error) {
+	mt, ok := s.acks[toKey]
 	if !ok || mt == nil {
-		mt = map[Timestamp]map[Addr]bool{}
-		s.acks[k] = mt
+		mt = map[Timestamp]map[string]bool{}
+		s.acks[toKey] = mt
 	}
 	ma, ok := mt[ts]
 	if !ok || ma == nil {
-		ma = map[Addr]bool{}
+		ma = map[string]bool{}
 		mt[ts] = ma
 	}
-	ma[fromReplica] = true
+	ma[fmt.Sprintf("%v:%v", fromReplica, fromKey)] = true
 	return len(ma), nil
 }
 
@@ -108,8 +108,9 @@ type MemPeer struct { // Implements ServerPeer interface for testing.
 }
 
 type MemMsg struct {
-	replica    *MemPeer
-	k          Key
+	dest      *MemPeer
+	toKey      Key
+	fromKey    Key
 	ts         Timestamp
 	acksNeeded int
 }
@@ -120,14 +121,14 @@ func NewMemPeer(me Addr, everyone map[Addr]*MemPeer, messages chan MemMsg) *MemP
 	return p
 }
 
-func (s *MemPeer) AsyncNotify(to Addr, k Key, ts Timestamp, acksNeeded int) error {
-	replica, ok := s.everyone[to]
-	if !ok || replica == nil {
-		return fmt.Errorf("no MemPeer.AsyncNotify replica: %v", to)
+func (s *MemPeer) AsyncNotify(to Addr, toKey Key, fromKey Key, ts Timestamp, acksNeeded int) error {
+	dest, ok := s.everyone[to]
+	if !ok || dest == nil {
+		return fmt.Errorf("no MemPeer.AsyncNotify dest: %v", to)
 	}
 	// Buffer messages in this channel.  A small channel can be used
 	// by tests to simulate a clogged up system.
-	s.messages <- MemMsg{replica, k, ts, acksNeeded}
+	s.messages <- MemMsg{dest, toKey, fromKey, ts, acksNeeded}
 	return nil
 }
 
@@ -145,7 +146,7 @@ func (s *MemPeer) SendMessages(maxSend int) (sentOk, sentErr int) {
 	for i := 0; maxSend < 0 || i < maxSend; i++ {
 		select {
 		case m := <-s.messages:
-			err := m.replica.sc.ReceiveNotify(s.me, m.k, m.ts, m.acksNeeded)
+			err := m.dest.sc.ReceiveNotify(s.me, m.toKey, m.fromKey, m.ts, m.acksNeeded)
 			if err == nil {
 				sentOk++
 			} else {
