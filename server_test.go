@@ -25,7 +25,7 @@ func TestBasicAbort(t *testing.T) {
 	}
 	a.sc = sc
 
-	t0 := NewTransaction(sc, 0)
+	t0 := NewTransaction(sc, 10)
 	if t0 == nil {
 		t.Errorf("expected t0")
 	}
@@ -58,7 +58,7 @@ func TestBasicCommit(t *testing.T) {
 	}
 	a.sc = sc
 
-	t0 := NewTransaction(sc, 0)
+	t0 := NewTransaction(sc, 10)
 	if t0.Set("x", []byte("xxx")) != nil {
 		t.Errorf("expected set to work")
 	}
@@ -70,14 +70,14 @@ func TestBasicCommit(t *testing.T) {
 		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
 
-	t1 := NewTransaction(sc, 1)
+	t1 := NewTransaction(sc, 11)
 	v, err := t1.Get("x")
 	if err != nil || string(v) != "xxx" {
 		fmt.Printf("ms.good: %#v\n", ms.good)
 		t.Errorf("expected get to give xxx, v: %v, err: %v", v, err)
 	}
 
-	t2 := NewTransaction(sc, 2)
+	t2 := NewTransaction(sc, 12)
 	if t2.Set("x", []byte("xxxx")) != nil {
 		t.Errorf("expected set to work")
 	}
@@ -89,13 +89,13 @@ func TestBasicCommit(t *testing.T) {
 		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
 
-	t3 := NewTransaction(sc, 3)
+	t3 := NewTransaction(sc, 13)
 	v, err = t3.Get("x")
 	if err != nil || string(v) != "xxxx" {
 		t.Errorf("expected get to give xxxx, v: %v, err: %v", v, err)
 	}
 
-	t4 := NewTransaction(sc, 4)
+	t4 := NewTransaction(sc, 14)
 	if t4.Del("x") != nil {
 		t.Errorf("expected del to work")
 	}
@@ -107,9 +107,63 @@ func TestBasicCommit(t *testing.T) {
 		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
 
-	t5 := NewTransaction(sc, 5)
+	t5 := NewTransaction(sc, 15)
 	v, err = t5.Get("x")
 	if err != nil || v != nil {
 		t.Errorf("expected t3.Get to give nil, v: %v, err: %v", v, err)
 	}
 }
+
+func TestCommitErrorIfConcurrent(t *testing.T) {
+	everyone := map[Addr]*MemPeer{}
+	a := NewMemPeer("a", everyone, make(chan MemMsg, 10))
+	ms := NewMemStore()
+	sc := NewServerController(a, ms)
+	if sc == nil {
+		t.Errorf("expected sc")
+	}
+	a.sc = sc
+
+	t0 := NewTransaction(sc, 10)
+	t0.Set("x", []byte("xxx"))
+	if t0.Commit(true) != nil {
+		t.Errorf("expected commit true to work")
+	}
+	a.SendMessages(-1)
+
+	t1 := NewTransaction(sc, 11)
+	v, err := t1.Get("x")
+	if err != nil || string(v) != "xxx" {
+		t.Errorf("expected Get(x) to work, v: %v, err: %v", v, err)
+	}
+	t1.Set("x", []byte("xxx1"))
+	v, err = t1.Get("x")
+	if err != nil || string(v) != "xxx1" {
+		t.Errorf("expected Get(x) to work, v: %v, err: %v", v, err)
+	}
+
+	t2 := NewTransaction(sc, 12)
+	v, err = t2.Get("x")
+	if err != nil || string(v) != "xxx" {
+		t.Errorf("expected Get(x) to work, v: %v, err: %v", v, err)
+	}
+	t2.Set("x", []byte("xxx2"))
+	v, err = t2.Get("x")
+	if err != nil || string(v) != "xxx2" {
+		t.Errorf("expected Get(x) to work, v: %v, err: %v", v, err)
+	}
+
+	if t1.Commit(true) != nil {
+		t.Errorf("expected commit t1 true to work")
+	}
+	a.SendMessages(-1)
+
+	v, err = t2.Get("x")
+	if err != nil || string(v) != "xxx2" {
+		t.Errorf("expected Get(x) to work, v: %v, err: %v", v, err)
+	}
+	if t2.Commit(true) == nil {
+		t.Errorf("expected commit t2 true to fail")
+	}
+}
+

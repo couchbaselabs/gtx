@@ -9,6 +9,9 @@ type Transaction struct {
 }
 
 func NewTransaction(s Server, ts Timestamp) *Transaction {
+	if ts <= 0 {
+		panic("ts must be > 0")
+	}
 	return &Transaction{
 		s:        s,
 		ts:       ts, // Should be logicalClock + f(clientId, random).
