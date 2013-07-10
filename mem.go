@@ -2,6 +2,7 @@ package gtx
 
 import (
 	"fmt"
+	"math/rand"
 )
 
 type MemStore struct { // Implements ServerStore interface for testing.
@@ -143,6 +144,10 @@ func (s *MemPeer) ReplicasFor(k Key) []Addr {
 // Allows caller to unclog maxSend number of messages.  A negative
 // maxSend means send everything and return.
 func (s *MemPeer) SendMessages(maxSend int) (sentOk, sentErr int) {
+	return s.SendDuplicateMessages(maxSend, 0)
+}
+
+func (s *MemPeer) SendDuplicateMessages(maxSend int, dupePct int) (sentOk, sentErr int) {
 	for i := 0; maxSend < 0 || i < maxSend; i++ {
 		select {
 		case m := <-s.messages:
@@ -151,6 +156,9 @@ func (s *MemPeer) SendMessages(maxSend int) (sentOk, sentErr int) {
 				sentOk++
 			} else {
 				sentErr++
+			}
+			if dupePct > 0 && rand.Intn(100) < dupePct {
+				s.messages <- m // Resend as a duplicate.
 			}
 		default:
 			return sentOk, sentErr

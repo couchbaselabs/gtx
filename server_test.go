@@ -168,6 +168,14 @@ func TestCommitErrorIfConcurrent(t *testing.T) {
 }
 
 func TestTwoKey(t *testing.T) {
+	testTwoKey(t, -1, 0)
+}
+
+func TestTwoKeyWithDuplicateMessages(t *testing.T) {
+	testTwoKey(t, 10, 50)
+}
+
+func testTwoKey(t *testing.T, maxSend int, dupePct int) {
 	everyone := map[Addr]*MemPeer{}
 	a := NewMemPeer("a", everyone, make(chan MemMsg, 10))
 	ms := NewMemStore()
@@ -183,8 +191,8 @@ func TestTwoKey(t *testing.T) {
 	if tx.Commit(true) != nil {
 		t.Errorf("expected commit to work")
 	}
-	sentOk, sentErr := a.SendMessages(-1)
-	if sentOk != 4 || sentErr != 0 {
+	sentOk, sentErr := a.SendDuplicateMessages(maxSend, dupePct)
+	if dupePct == 0 && (sentOk != 4 || sentErr != 0) {
 		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
 
@@ -202,8 +210,8 @@ func TestTwoKey(t *testing.T) {
 	if tx.Commit(true) != nil {
 		t.Errorf("expected commit to work")
 	}
-	sentOk, sentErr = a.SendMessages(-1)
-	if sentOk != 4 || sentErr != 0 {
+	sentOk, sentErr = a.SendDuplicateMessages(maxSend, dupePct)
+	if dupePct == 0 && (sentOk != 4 || sentErr != 0) {
 		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
 
@@ -220,8 +228,8 @@ func TestTwoKey(t *testing.T) {
 	if tx.Commit(true) != nil {
 		t.Errorf("expected commit to work")
 	}
-	sentOk, sentErr = a.SendMessages(-1)
-	if sentOk != 1 || sentErr != 0 {
+	sentOk, sentErr = a.SendDuplicateMessages(maxSend, dupePct)
+	if dupePct == 0 && (sentOk != 1 || sentErr != 0) {
 		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
 	}
 
