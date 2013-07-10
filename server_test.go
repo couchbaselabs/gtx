@@ -216,4 +216,22 @@ func TestTwoKey(t *testing.T) {
 	if err != nil || string(v) != "yyy" {
 		t.Errorf("expected Get to work, v: %v, err: %v", v, err)
 	}
+	tx.Set("x", []byte("xxxx"))
+	if tx.Commit(true) != nil {
+		t.Errorf("expected commit to work")
+	}
+	sentOk, sentErr = a.SendMessages(-1)
+	if sentOk != 1 || sentErr != 0 {
+		t.Errorf("unexpected sentOk: %v, sentErr: %v", sentOk, sentErr)
+	}
+
+	tx = NewTransaction(sc, 13)
+	v, err = tx.Get("x")
+	if err != nil || string(v) != "xxxx" {
+		t.Errorf("expected Get to work, v: %v, err: %v", v, err)
+	}
+	v, err = tx.Get("y")
+	if err != nil || string(v) != "yyy" {
+		t.Errorf("expected Get to work, v: %v, err: %v", v, err)
+	}
 }

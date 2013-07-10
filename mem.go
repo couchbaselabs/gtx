@@ -108,7 +108,7 @@ type MemPeer struct { // Implements ServerPeer interface for testing.
 }
 
 type MemMsg struct {
-	dest      *MemPeer
+	dest       *MemPeer
 	toKey      Key
 	fromKey    Key
 	ts         Timestamp
