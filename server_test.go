@@ -172,7 +172,9 @@ func TestTwoKey(t *testing.T) {
 }
 
 func TestTwoKeyWithDuplicateMessages(t *testing.T) {
-	testTwoKey(t, 10, 50)
+	for i := 0; i < 1000; i++ {
+		testTwoKey(t, 50, 50)
+	}
 }
 
 func testTwoKey(t *testing.T, maxSend int, dupePct int) {

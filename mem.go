@@ -141,8 +141,8 @@ func (s *MemPeer) ReplicasFor(k Key) []Addr {
 	return replicas
 }
 
-// Allows caller to unclog maxSend number of messages.  A negative
-// maxSend means send everything and return.
+// Send up to maxSend number of messages.  A negative maxSend means
+// send everything on the messages channel and return.
 func (s *MemPeer) SendMessages(maxSend int) (sentOk, sentErr int) {
 	return s.SendDuplicateMessages(maxSend, 0)
 }
