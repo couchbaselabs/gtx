@@ -73,7 +73,7 @@ func TestBasicCommit(t *testing.T) {
 	t1 := NewTransaction(sc, 11)
 	v, err := t1.Get("x")
 	if err != nil || string(v) != "xxx" {
-		fmt.Printf("ms.good: %#v\n", ms.good)
+		fmt.Printf("ms.stable: %#v\n", ms.stable)
 		t.Errorf("expected get to give xxx, v: %v, err: %v", v, err)
 	}
 
@@ -166,4 +166,3 @@ func TestCommitErrorIfConcurrent(t *testing.T) {
 		t.Errorf("expected commit t2 true to fail")
 	}
 }
-

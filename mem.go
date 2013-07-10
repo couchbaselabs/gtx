@@ -6,20 +6,20 @@ import (
 
 type MemStore struct { // Implements ServerStore interface for testing.
 	pending map[Key]map[Timestamp]*Write
-	good    map[Key]map[Timestamp]*Write
+	stable  map[Key]map[Timestamp]*Write
 	acks    map[Key]map[Timestamp]map[Addr]bool
 }
 
 func NewMemStore() *MemStore {
 	return &MemStore{
 		pending: map[Key]map[Timestamp]*Write{},
-		good:    map[Key]map[Timestamp]*Write{},
+		stable:  map[Key]map[Timestamp]*Write{},
 		acks:    map[Key]map[Timestamp]map[Addr]bool{},
 	}
 }
 
-func (s *MemStore) GoodFind(k Key, tsMinimum Timestamp) (*Write, error) {
-	return findMaxWrite(s.good[k], tsMinimum), nil
+func (s *MemStore) StableFind(k Key, tsMinimum Timestamp) (*Write, error) {
+	return findMaxWrite(s.stable[k], tsMinimum), nil
 }
 
 func findMaxWrite(tsMap map[Timestamp]*Write, tsMinimum Timestamp) *Write {
@@ -48,10 +48,10 @@ func (s *MemStore) PendingAdd(w *Write) error {
 			return fmt.Errorf("concurrent write already pending"+
 				", prev ts: %v, ts: %v", prevPending.Ts, w.Prev)
 		}
-		prevGood := findMaxWrite(s.good[w.Key], w.Prev)
-		if prevGood != nil && prevGood.Ts > w.Prev {
-			return fmt.Errorf("concurrent write already good"+
-				", prev ts: %v, ts: %v", prevGood.Ts, w.Prev)
+		prevStable := findMaxWrite(s.stable[w.Key], w.Prev)
+		if prevStable != nil && prevStable.Ts > w.Prev {
+			return fmt.Errorf("concurrent write already stable"+
+				", prev ts: %v, ts: %v", prevStable.Ts, w.Prev)
 		}
 	}
 	tsMap, ok := s.pending[w.Key]
@@ -63,6 +63,7 @@ func (s *MemStore) PendingAdd(w *Write) error {
 	return nil
 }
 
+// Promote a pending write to stable.
 func (s *MemStore) PendingPromote(k Key, ts Timestamp) error {
 	ptsMap, ok := s.pending[k]
 	if !ok || ptsMap == nil {
@@ -72,10 +73,10 @@ func (s *MemStore) PendingPromote(k Key, ts Timestamp) error {
 	if !ok || w == nil {
 		return fmt.Errorf("no write to promote at ts: %v, k: %v", ts, k)
 	}
-	gtsMap, ok := s.good[k]
+	gtsMap, ok := s.stable[k]
 	if !ok || gtsMap == nil {
 		gtsMap = map[Timestamp]*Write{}
-		s.good[k] = gtsMap
+		s.stable[k] = gtsMap
 	}
 	gtsMap[ts] = w
 	// TODO: eventually clear out ptsMap and s.pending entries.

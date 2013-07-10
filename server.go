@@ -29,7 +29,7 @@ type ServerPeer interface {
 
 // Represents server-local persistence.
 type ServerStore interface {
-	GoodFind(k Key, tsMininum Timestamp) (*Write, error)
+	StableFind(k Key, tsMininum Timestamp) (*Write, error)
 	PendingGet(k Key, ts Timestamp) (*Write, error)
 	PendingAdd(w *Write) error
 	PendingPromote(k Key, ts Timestamp) error
@@ -65,7 +65,7 @@ func (s *ServerController) Set(w *Write) error {
 }
 
 func (s *ServerController) Get(k Key, ts Timestamp) (*Write, error) {
-	w, err := s.ss.GoodFind(k, ts)
+	w, err := s.ss.StableFind(k, ts)
 	if err != nil || w != nil {
 		return w, err
 	}
@@ -73,8 +73,8 @@ func (s *ServerController) Get(k Key, ts Timestamp) (*Write, error) {
 		return nil, nil
 	}
 	// TODO: Optimization if we can read from pending, then the ts must
-	// come from a client there the ts is already good on some peer server.
-	// So we can theoretically promote the pending write to good right now.
+	// come from a client there the ts is already stable on some peer server.
+	// So we can theoretically promote the pending write to stable right now.
 	return s.ss.PendingGet(k, ts)
 }
 
