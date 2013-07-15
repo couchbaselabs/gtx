@@ -70,8 +70,7 @@ func (t *Transaction) Commit(errorIfConcurrent bool) error {
 	for k, _ := range t.writes {
 		sibs = append(sibs, k)
 	}
-	// TODO: Sort the sibs.
-	// TODO: Sort the t.writes.
+	// TODO: Sort the sibs and t.writes to avoid lock inversions.
 	for k, v := range t.writes {
 		var tsRead Timestamp
 		if errorIfConcurrent {
