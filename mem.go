@@ -143,14 +143,19 @@ func (s *MemPeer) ReplicasFor(k Key) []Addr {
 
 // Send up to maxSend number of messages.  A negative maxSend means
 // send everything on the messages channel and return.
-func (s *MemPeer) SendMessages(maxSend int) (sentOk, sentErr int) {
-	return s.SendDuplicateMessages(maxSend, 0)
+func (s *MemPeer) SendMessages(maxSend int) (numReceived, sentOk, sentErr int) {
+	return s.SendMessagesEx(maxSend, 0, 0)
 }
 
-func (s *MemPeer) SendDuplicateMessages(maxSend int, dupePct int) (sentOk, sentErr int) {
-	for i := 0; maxSend < 0 || i < maxSend; i++ {
+func (s *MemPeer) SendMessagesEx(maxSend, dupePct, dropPct int) (numReceived, sentOk, sentErr int) {
+	i := 0
+	for maxSend < 0 || i < maxSend {
 		select {
 		case m := <-s.messages:
+			i++
+			if dropPct > 0 && rand.Intn(100) < dropPct {
+				continue
+			}
 			err := m.dest.sc.ReceiveNotify(s.me, m.toKey, m.fromKey, m.ts, m.acksNeeded)
 			if err == nil {
 				sentOk++
@@ -161,8 +166,8 @@ func (s *MemPeer) SendDuplicateMessages(maxSend int, dupePct int) (sentOk, sentE
 				s.messages <- m // Resend as a duplicate.
 			}
 		default:
-			return sentOk, sentErr
+			return i, sentOk, sentErr
 		}
 	}
-	return sentOk, sentErr
+	return i, sentOk, sentErr
 }
