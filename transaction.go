@@ -2,6 +2,7 @@ package gtx
 
 import (
 	"fmt"
+	"sort"
 )
 
 type Transaction struct {
@@ -66,12 +67,17 @@ func (t *Transaction) Get(k Key) ([]byte, error) {
 }
 
 func (t *Transaction) Commit(errorIfConcurrent bool) error {
-	sibs := make([]Key, 0, len(t.writes))
+	arr := make([]string, 0, len(t.writes))
 	for k, _ := range t.writes {
-		sibs = append(sibs, k)
+		arr = append(arr, (string)(k))
 	}
-	// TODO: Sort the sibs and t.writes to avoid lock inversions.
-	for k, v := range t.writes {
+	sort.Strings(arr) // To avoid deadlocks.
+	sibs := make([]Key, 0, len(arr))
+	for _, x := range arr {
+		sibs = append(sibs, (Key)(x))
+	}
+	for _, k := range sibs {
+		v, _ := t.writes[k]
 		var tsRead Timestamp
 		if errorIfConcurrent {
 			tsRead, _ = t.reads[k] // Provide the ts we saw at read/Get() time.
