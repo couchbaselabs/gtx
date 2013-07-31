@@ -1,8 +1,13 @@
 package gtx
 
 import (
+	"bytes"
+	"encoding/json"
+
 	cb "github.com/couchbaselabs/go-couchbase"
 )
+
+var NUL = []byte{0}
 
 type CBStore struct { // Implements ServerStore interface for testing.
 	url            string // For connection.
@@ -40,7 +45,25 @@ func NewCBStore(url, metaPoolName, metaBucketName, metaPrefix string) (*CBStore,
 }
 
 func (s *CBStore) StableFind(k Key, tsMinimum Timestamp) (*Write, error) {
-	return nil, nil
+	var c uint64
+	b, err := s.metaBucket.GetsRaw(s.metaPrefix + "s_" + string(k), &c)
+	if err == nil || b == nil {
+		return nil, err
+	}
+	var max *Write
+	for _, x := range bytes.Split(b, NUL) {
+		var w *Write
+		err = json.Unmarshal(x, w)
+		if err != nil {
+			return nil, err
+		}
+		if (max == nil || max.Ts < w.Ts) && w.Ts >= tsMinimum {
+			max = w
+		}
+	}
+	// TODO: Perhaps look in non-meta bucket?
+	// TODO: Randomly try to GC the stable sequence.
+	return max, nil
 }
 
 func (s *CBStore) PendingGet(k Key, ts Timestamp) (*Write, error) {
