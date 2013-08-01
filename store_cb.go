@@ -54,14 +54,7 @@ func (s *CBStore) StableFind(k Key, tsMinimum Timestamp) (*Write, error) {
 }
 
 func (s *CBStore) PendingGet(k Key, ts Timestamp) (res *Write, err error) {
-	err = s.findWrite(PENDING_PREFIX, k, func(w *Write) bool {
-		if w.Ts == ts {
-			res = w
-			return true
-		}
-		return false
-	})
-	return res, err
+	return s.findWrite(PENDING_PREFIX, k, ts)
 }
 
 func (s *CBStore) PendingAdd(w *Write) error {
@@ -78,21 +71,28 @@ func (s *CBStore) Ack(toKey Key, fromKey Key, ts Timestamp, fromReplica Addr) (i
 	return 0, nil
 }
 
-func (s *CBStore) findMaxWrite(prefix string, k Key, tsMinimum Timestamp) (*Write, error) {
-	var max *Write
-	err := s.findWrite(prefix, k, func(w *Write) bool {
+func (s *CBStore) findMaxWrite(prefix string, k Key, tsMinimum Timestamp) (max *Write, err error) {
+	err = s.visitWrites(prefix, k, func(w *Write) bool {
 		if (max == nil || max.Ts < w.Ts) && w.Ts >= tsMinimum {
 			max = w
 		}
-		return false
+		return true
 	})
-	if err != nil {
-		return nil, err
-	}
-	return max, nil
+	return max, err
 }
 
-func (s *CBStore) findWrite(prefix string, k Key, cb func(*Write) bool) error {
+func (s *CBStore) findWrite(prefix string, k Key, ts Timestamp) (res *Write, err error) {
+	err = s.visitWrites(PENDING_PREFIX, k, func(w *Write) bool {
+		if w.Ts == ts {
+			res = w
+			return false
+		}
+		return true
+	})
+	return res, err
+}
+
+func (s *CBStore) visitWrites(prefix string, k Key, visitor func(*Write) bool) error {
 	var c uint64
 	b, err := s.metaBucket.GetsRaw(s.metaPrefix+prefix+string(k), &c)
 	if err != nil || len(b) <= 0 {
@@ -107,7 +107,7 @@ func (s *CBStore) findWrite(prefix string, k Key, cb func(*Write) bool) error {
 		if err != nil {
 			return err
 		}
-		if cb(w) {
+		if !visitor(w) {
 			return nil
 		}
 	}
