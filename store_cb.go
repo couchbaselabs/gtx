@@ -50,32 +50,30 @@ func NewCBStore(url, metaPoolName, metaBucketName, metaPrefix string) (*CBStore,
 }
 
 func (s *CBStore) StableFind(k Key, tsMinimum Timestamp) (*Write, error) {
-	var c uint64
-	b, err := s.metaBucket.GetsRaw(s.metaPrefix+STABLE_PREFIX+string(k), &c)
-	if err != nil || len(b) <= 0 {
+	var max *Write
+	err := s.findWrite(STABLE_PREFIX, k, "",
+		func(w *Write) bool {
+			if (max == nil || max.Ts < w.Ts) && w.Ts >= tsMinimum {
+				max = w
+			}
+			return false
+		})
+	if err != nil {
 		return nil, err
 	}
-	var max *Write
-	for _, x := range bytes.Split(b, NUL) {
-		var w *Write
-		err = json.Unmarshal(x, w)
-		if err != nil {
-			return nil, err
-		}
-		if (max == nil || max.Ts < w.Ts) && w.Ts >= tsMinimum {
-			max = w
-		}
-	}
-	// TODO: Perhaps look in non-meta bucket?
-	// TODO: Randomly try to GC the stable sequence using the c CAS.
 	return max, nil
 }
 
-func (s *CBStore) PendingGet(k Key, ts Timestamp) (*Write, error) {
-	var w *Write
-	err := s.metaBucket.Get(s.metaPrefix+PENDING_PREFIX+string(k)+
-		":"+ts.String(), &w)
-	return w, err
+func (s *CBStore) PendingGet(k Key, ts Timestamp) (res *Write, err error) {
+	err = s.findWrite(PENDING_PREFIX, k, ":"+ts.String(),
+		func(w *Write) bool {
+			if w.Ts == ts {
+				res = w
+				return true
+			}
+			return false
+		})
+	return res, err
 }
 
 func (s *CBStore) PendingAdd(w *Write) error {
@@ -88,4 +86,26 @@ func (s *CBStore) PendingPromote(k Key, ts Timestamp) error {
 
 func (s *CBStore) Ack(toKey Key, fromKey Key, ts Timestamp, fromReplica Addr) (int, error) {
 	return 0, nil
+}
+
+func (s *CBStore) findWrite(prefix string, k Key, suffix string,
+	cb func(*Write) bool) error {
+	var c uint64
+	b, err := s.metaBucket.GetsRaw(s.metaPrefix+prefix+string(k)+suffix, &c)
+	if err != nil || len(b) <= 0 {
+		return err
+	}
+	for _, x := range bytes.Split(b, NUL) {
+		var w *Write
+		err = json.Unmarshal(x, w)
+		if err != nil {
+			return err
+		}
+		if cb(w) {
+			return nil
+		}
+	}
+	// TODO: Perhaps look in non-meta bucket?
+	// TODO: Randomly try to GC the stable sequence using the c CAS.
+	return nil
 }
