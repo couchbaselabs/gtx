@@ -3,6 +3,7 @@ package gtx
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	cb "github.com/couchbaselabs/go-couchbase"
 )
@@ -59,6 +60,22 @@ func (s *CBStore) PendingGet(k Key, ts Timestamp) (res *Write, err error) {
 
 func (s *CBStore) PendingAdd(w *Write) error {
 	if w.Prev > 0 {
+		prevPending, err := s.findMaxWrite(PENDING_PREFIX, w.Key, w.Prev)
+		if err != nil {
+			return err
+		}
+		if prevPending != nil && prevPending.Ts > w.Prev {
+			return fmt.Errorf("concurrent write already pending"+
+				", prev ts: %v, ts: %v", prevPending.Ts, w.Prev)
+		}
+		prevStable, err := s.findMaxWrite(STABLE_PREFIX, w.Key, w.Prev)
+		if err != nil {
+			return err
+		}
+		if prevStable != nil && prevStable.Ts > w.Prev {
+			return fmt.Errorf("concurrent write already stable"+
+				", prev ts: %v, ts: %v", prevStable.Ts, w.Prev)
+		}
 	}
 	return nil
 }
