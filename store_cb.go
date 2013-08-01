@@ -50,17 +50,7 @@ func NewCBStore(url, metaPoolName, metaBucketName, metaPrefix string) (*CBStore,
 }
 
 func (s *CBStore) StableFind(k Key, tsMinimum Timestamp) (*Write, error) {
-	var max *Write
-	err := s.findWrite(STABLE_PREFIX, k, func(w *Write) bool {
-		if (max == nil || max.Ts < w.Ts) && w.Ts >= tsMinimum {
-			max = w
-		}
-		return false
-	})
-	if err != nil {
-		return nil, err
-	}
-	return max, nil
+	return s.findMaxWrite(STABLE_PREFIX, k, tsMinimum)
 }
 
 func (s *CBStore) PendingGet(k Key, ts Timestamp) (res *Write, err error) {
@@ -86,6 +76,20 @@ func (s *CBStore) PendingPromote(k Key, ts Timestamp) error {
 
 func (s *CBStore) Ack(toKey Key, fromKey Key, ts Timestamp, fromReplica Addr) (int, error) {
 	return 0, nil
+}
+
+func (s *CBStore) findMaxWrite(prefix string, k Key, tsMinimum Timestamp) (*Write, error) {
+	var max *Write
+	err := s.findWrite(prefix, k, func(w *Write) bool {
+		if (max == nil || max.Ts < w.Ts) && w.Ts >= tsMinimum {
+			max = w
+		}
+		return false
+	})
+	if err != nil {
+		return nil, err
+	}
+	return max, nil
 }
 
 func (s *CBStore) findWrite(prefix string, k Key, cb func(*Write) bool) error {
