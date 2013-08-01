@@ -1,11 +1,19 @@
 package gtx
 
+import (
+	"fmt"
+)
+
 // Non-blocking transactional atomicity (NBTA) algorithm
 // from http://www.bailis.org/blob/non-blocking-transactional-atomicity
 
 type Timestamp uint64 // Should be logicalClock + f(clientId, random).
 type Addr string
 type Key string
+
+func (ts Timestamp) String() string {
+	return fmt.Sprintf("%d", ts)
+}
 
 type Write struct {
 	Key  Key

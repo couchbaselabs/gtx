@@ -9,6 +9,11 @@ import (
 
 var NUL = []byte{0}
 
+const (
+	STABLE_PREFIX  = "s_"
+	PENDING_PREFIX = "p_"
+)
+
 type CBStore struct { // Implements ServerStore interface for testing.
 	url            string // For connection.
 	metaPoolName   string // Pool where we'll manage tx metadata.
@@ -46,8 +51,8 @@ func NewCBStore(url, metaPoolName, metaBucketName, metaPrefix string) (*CBStore,
 
 func (s *CBStore) StableFind(k Key, tsMinimum Timestamp) (*Write, error) {
 	var c uint64
-	b, err := s.metaBucket.GetsRaw(s.metaPrefix + "s_" + string(k), &c)
-	if err == nil || b == nil {
+	b, err := s.metaBucket.GetsRaw(s.metaPrefix+STABLE_PREFIX+string(k), &c)
+	if err != nil || len(b) <= 0 {
 		return nil, err
 	}
 	var max *Write
@@ -62,12 +67,15 @@ func (s *CBStore) StableFind(k Key, tsMinimum Timestamp) (*Write, error) {
 		}
 	}
 	// TODO: Perhaps look in non-meta bucket?
-	// TODO: Randomly try to GC the stable sequence.
+	// TODO: Randomly try to GC the stable sequence using the c CAS.
 	return max, nil
 }
 
 func (s *CBStore) PendingGet(k Key, ts Timestamp) (*Write, error) {
-	return nil, nil
+	var w *Write
+	err := s.metaBucket.Get(s.metaPrefix+PENDING_PREFIX+string(k)+
+		":"+ts.String(), &w)
+	return w, err
 }
 
 func (s *CBStore) PendingAdd(w *Write) error {
