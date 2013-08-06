@@ -110,8 +110,7 @@ func (s *CBStore) findWrite(prefix string, k Key, ts Timestamp) (res *Write, err
 }
 
 func (s *CBStore) visitWrites(prefix string, k Key, visitor func(*Write) bool) error {
-	var c uint64
-	b, err := s.metaBucket.GetsRaw(s.metaPrefix+prefix+string(k), &c)
+	b, _, _, err := s.metaBucket.GetsRaw(s.metaPrefix+prefix+string(k))
 	if err != nil || len(b) <= 0 {
 		return err
 	}
@@ -129,6 +128,6 @@ func (s *CBStore) visitWrites(prefix string, k Key, visitor func(*Write) bool) e
 		}
 	}
 	// TODO: Perhaps look in non-meta bucket?
-	// TODO: Randomly try to GC the stable sequence using the c CAS.
+	// TODO: Randomly try to GC the stable sequence using cas.
 	return nil
 }
