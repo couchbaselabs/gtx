@@ -110,7 +110,7 @@ func (s *CBStore) findWrite(prefix string, k Key, ts Timestamp) (res *Write, err
 }
 
 func (s *CBStore) visitWrites(prefix string, k Key, visitor func(*Write) bool) error {
-	b, _, _, err := s.metaBucket.GetsRaw(s.metaPrefix+prefix+string(k))
+	b, _, _, err := s.metaBucket.GetsRaw(s.metaPrefix + prefix + string(k))
 	if err != nil || len(b) <= 0 {
 		return err
 	}
