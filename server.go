@@ -82,10 +82,10 @@ func (s *ServerController) Get(k Key, ts Timestamp) (*Write, error) {
 	}
 	w, err = s.ss.PendingGet(k, ts)
 	if err != nil && w != nil {
-		// Optimization if we can read from pending, then the ts must
-		// come from a client which knows the ts is already stable on
-		// some peer server.  So we can theoretically promote the
-		// pending write to stable right now.
+		// Optimization here: if we can read from pending, then the ts
+		// must come from a client which knows the ts is already
+		// stable on some peer server.  So we can theoretically
+		// promote the pending write to stable right now.
 		s.ss.PendingPromote(k, ts) // TODO: Perhaps do this atomically with PendingGet().
 	}
 	return w, err
